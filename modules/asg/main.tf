@@ -38,15 +38,62 @@ resource "aws_autoscaling_group" "asg" {
    }
 }
 
+# Scale up policy
 resource "aws_autoscaling_policy" "scale_up" {
   name = "${var.project_name}-asg-scale-up}"
   autoscaling_group_name = aws_autoscaling_group.asg.name
   adjustment_type = "ChangeInCapacity"
-  scaling_adjustment = "1"
-  cooldown = "300"
+  scaling_adjustment = 1
+  cooldown = 300
   policy_type = "SimpleScaling"
 }
 
-# resource "aws_cloudwatch_metric_alarm" "scale_up_alarm" {
-  
-# }
+# Scale up alarm
+resource "aws_cloudwatch_metric_alarm" "scale_up_alarm" {
+  alarm_name = "${var.project_name}-asg-scale-up-alarm"
+  alarm_description = "asg scale up cpu alarm"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods = 2
+  metric_name = "CPUUtilization"
+  namespace = "AWS/EC2"
+  period = 120
+  statistic = "Average"
+  threshold = 80
+
+  dimensions = {
+    AutoScalingGroupName = aws_autoscaling_group.asg.name
+  }
+
+  alarm_actions = [aws_autoscaling_policy.scale_up.arn]
+  actions_enabled = true
+}
+
+# Scale down policy
+resource "aws_autoscaling_policy" "scale_down" {
+  name = "${var.project_name}-asg-scale-down"
+  autoscaling_group_name = aws_autoscaling_group.asg.name
+  adjustment_type = "ChangeInCapacity"
+  scaling_adjustment = -1
+  cooldown = 300
+  policy_type = "SimpleScaling"
+}
+
+# Scale down alarm
+resource "aws_cloudwatch_metric_alarm" "scale_down_alarm" {
+  alarm_name = "${var.project_name}-asg-scale-down-alarm"
+  alarm_description = "asg scale down cpu alarm"
+  comparison_operator = "LessThanOrEqualToThreshold"
+  evaluation_periods = 2
+  metric_name = "CPUUtilization"
+  namespace = "AWS/EC2"
+  period = 120
+  statistic = "Average"
+  threshold = 5
+
+  dimensions = {
+    AutoScalingGroupName = aws_autoscaling_group.asg.name
+  }
+
+  alarm_actions = [aws_autoscaling_policy.scale_down.arn]
+  actions_enabled = true
+}
